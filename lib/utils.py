@@ -15,9 +15,3 @@ def load_csv_df(spark,data_file):
                 .option("inferSchema","true") \
                 .option("dateFormat", "yyyyMMdd") \
                 .csv(data_file)
-def get_country_count(data_frame):
-    return data_frame.where("Age < 40") \
-    .select("Age","Gender","Country","state") \
-    .groupBy("Country") \
-    .count()
-
