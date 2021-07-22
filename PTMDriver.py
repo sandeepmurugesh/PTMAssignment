@@ -3,6 +3,8 @@ import sys
 from pyspark import SparkConf
 from pyspark.sql import *
 
+from pyspark.sql.functions import col
+from pyspark.sql.types import *
 from lib.logger import Log4J
 from lib.utils import get_spark_app_config, load_csv_df, get_country_count
 
@@ -17,6 +19,7 @@ if __name__ == '__main__':
 
     weather_data_df = load_csv_df(spark,"data/2019/*.csv.gz")
     weather_data_df = weather_data_df.withColumnRenamed("STN---", "STN")
+    weather_data_df =weather_data_df.withColumn("YEARMODA", col("YEARMODA").cast("string"))
     country_df = load_csv_df(spark,"data/countrylist.csv")
     station_df = load_csv_df(spark,"data/stationlist.csv")
 
@@ -41,7 +44,7 @@ if __name__ == '__main__':
                                         GROUP BY COUNTRY_FULL                   \
                                         ORDER BY AVG_TEMP DESC )  SUB WHERE SUB.RNK=1 \
                                          ")
-    #average_mean_temp_sql.show()
+    average_mean_temp_sql.show()
     average_mean_wind_sql= spark.sql("SELECT COUNTRY ,AVG_WIND FROM \
                                       (SELECT COUNTRY_FULL AS COUNTRY           \
                                             ,AVG(WDSP)  AS AVG_WIND      \
@@ -59,13 +62,12 @@ if __name__ == '__main__':
                                         GROUP BY COUNTRY_FULL                   \
                                         ORDER BY AVG_WIND DESC ) SUB WHERE SUB.RNK=2")
 
-    #average_mean_wind_sql.show()
+    average_mean_wind_sql.show()
 
-    most_consecutive_tornado  = spark.sql("SELECT COUNTRY_FULL AS COUNTRY         \
-                                              ,YEARMODA  \
-                                              ,FRSHTT          \
-                                                                                \
-                                        FROM                                    \
+    most_consecutive_tornado  = spark.sql(" SELECT COUNTRY,MIN(DATE),MAX(DATE),COUNT(*) AS NUMDAYS FROM (SELECT COUNTRY_FULL AS COUNTRY  \
+                                                    ,to_date(YEARMODA,'yyyyMMdd') AS DATE      \
+                                               ,ROW_NUMBER() OVER(PARTITION BY COUNTRY_FULL ORDER BY to_date(YEARMODA,'yyyyMMdd')) AS SEQ_NUM\
+                                         FROM                                    \
                                         weather_tbl w                           \
                                         LEFT JOIN                               \
                                         station_tbl s                           \
@@ -73,7 +75,7 @@ if __name__ == '__main__':
                                         LEFT JOIN                               \
                                         country_tbl c                           \
                                         ON s.COUNTRY_ABBR = c.COUNTRY_ABBR      \
-                                        WHERE FRSHTT =000001")
+                                        WHERE FRSHTT =000001 ) SUB GROUP BY COUNTRY ,date_add(DATE,-SEQ_NUM) ORDER BY NUMDAYS DESC LIMIT 1 ")
 
     most_consecutive_tornado.show()
 
