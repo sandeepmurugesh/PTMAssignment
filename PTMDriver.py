@@ -77,20 +77,10 @@ if __name__ == '__main__':
                                         ON s.COUNTRY_ABBR = c.COUNTRY_ABBR      \
                                         WHERE FRSHTT =000001 ) SUB GROUP BY COUNTRY ,date_add(DATE,-SEQ_NUM) ORDER BY NUMDAYS DESC LIMIT 1 ")
 
+
     most_consecutive_tornado.show()
 
-
-
-
-
-
-
-
-
-
-
     logger.info("Stopping Spark session")
-
     spark.stop()
 
 
